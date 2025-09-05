@@ -1,0 +1,140 @@
+{
+  "name": "AI Email Autoresponder (Gmail)",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [
+        300,
+        200
+      ],
+      "parameters": {
+        "triggerOn": "newEmail"
+      },
+      "credentials": {
+        "gmailOAuth2": "Your Gmail OAuth2"
+      }
+    },
+    {
+      "id": "2",
+      "name": "OpenAI - Generate Response",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "operation": "chat",
+        "model": "gpt-4",
+        "chatPrompt": "You are a sales assistant. Extract key details from this email and write a personalized reply. Keep it natural and engaging. Avoid generic phrases."
+      },
+      "credentials": {
+        "openAiApi": "OpenAI API"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Check If Lead",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"subject\"]}}",
+              "operation": "contains",
+              "value2": "Lead"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Wait 90 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "amount": 90,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        200
+      ],
+      "parameters": {
+        "operation": "send",
+        "to": "={{$json[\"from\"]}}",
+        "subject": "Re: {{$json[\"subject\"]}}",
+        "content": "={{$json[\"data\"][0][\"content\"]}}"
+      },
+      "credentials": {
+        "gmailOAuth2": "Your Gmail OAuth2"
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Generate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Generate Response": {
+      "main": [
+        [
+          {
+            "node": "Check If Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Lead": {
+      "main": [
+        [
+          {
+            "node": "Wait 90 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Wait 90 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
